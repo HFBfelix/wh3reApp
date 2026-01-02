@@ -1,0 +1,156 @@
+1) Produit
+
+Wh3re = app iOS/Android pour organiser des événements (dîner, déjeuner, afterwork, sortie, weekend, voyage, autre).
+
+Créateur crée un event, invite des participants, collecte réponses textuelles.
+
+Le système génère 2–3 options + 1 recommandation finale, stockées en base.
+
+2) Objectif IA (qualité attendue)
+
+Sortie IA doit être utile, structurée, réaliste, et contextuelle.
+
+Toujours :
+
+summary (mentionne conflits s’il y en a)
+
+options[] (2–3 max)
+
+recommended
+
+Conflits (mer vs lac, budget vs luxe, ville vs nature) :
+
+Identifier clairement le conflit
+
+Proposer options pour sous-groupes ou compromis réaliste (<2h entre activités/ambiances)
+
+3) Architecture backend à respecter
+Backend = 1 Cloud Function (HTTPS callable ou HTTP endpoint)
+
+Rôle: orchestrer le pipeline :
+
+Vérifier auth via Firebase Auth ID token
+
+Charger event + réponses depuis Firestore
+
+Si event.city == null → inférer scope + inferred_cities via OpenAI
+
+Générer requêtes via buildSearchQueries(category, city, scope, inferredCities)
+
+Appeler Google Places Text Search (multi-requêtes, dédup)
+
+Appeler OpenAI → JSON strict
+
+Valider structure + anti-hallucination sur certains cas
+
+Sauvegarder dans Firestore (upsert sur eventId)
+
+Interdictions :
+
+Pas de refactor global inutile
+
+Pas de changement de format de réponse consommé par l’app
+
+Pas de ville par défaut hardcodée
+
+Pas de nouveaux champs obligatoires côté UI
+
+4) Modèle de données (Firestore)
+
+Collections recommandées (noms indicatifs, à garder stables) :
+
+events/{eventId}
+
+ownerId, type, description, city?, budgetLevel?, context?, createdAt, …
+
+events/{eventId}/responses/{responseId}
+
+participantName, text, createdAt
+
+ai_suggestions/{eventId} (document unique par event)
+
+eventId
+
+summary
+
+recommended
+
+options (array)
+
+updatedAt
+
+(optionnel) mode: "places" | "destinations" / placesFound
+
+Règle d’ownership
+
+Seul ownerId peut déclencher la génération.
+
+5) UI/UX rules (ne pas casser)
+
+Champ Contexte :
+
+Visible uniquement au créateur
+
+Visible pour tous les types sauf dîner/déjeuner
+
+Non visible par les invités
+
+Ne pas complexifier le formulaire : 1 champ texte “Contexte” suffit.
+
+6) Google Places rules
+
+buildSearchQueries() :
+
+Utilise city puis inferredCities (max 3)
+
+Si aucun lieu → requêtes scope-based (local/national/europe/world)
+
+Zéro biais géographique : aucun fallback de ville
+
+searchPlaces() :
+
+travel/weekend: max 20 résultats, autres: 10
+
+Déduplication par place_id
+
+7) IA / Anti-hallucination (règles pragmatiques)
+
+Toujours rendre JSON strict (sans markdown).
+
+Si Google Places a fourni des candidats :
+
+options doivent venir uniquement de cette liste (place_id exact).
+
+Si aucun candidat :
+
+autoriser des noms concrets seulement si demandés explicitement et plausibles/vérifiables (ex: grandes chaînes, lieux très connus)
+
+sinon rester sur “types d’établissements” + zones/activités
+
+8) Standards de code (stricts)
+
+Modifications minimales, testables, rollback faciles.
+
+Ajouter des logs structurés (sans spam).
+
+Toujours fournir un mini plan de test (4 scénarios).
+
+9) Tests minimum avant merge
+
+Dîner/déjeuner + city connue → 2–3 restaurants via Places.
+
+Voyage/weekend + city null + contexte précis (Suisse/Luxembourg/Noël) → suggestions cohérentes (pas de dérive locale incohérente).
+
+Conflit mer/lac → conflits mentionnés + options/compromis.
+
+Cas “validation échoue” → réponse gérée proprement (pas crash UI).
+
+Point important (recommandation franche)
+
+Oui, tu peux obtenir des réponses proches de ChatGPT avec ton API OpenAI, mais seulement si :
+
+tu donnes le bon contexte au modèle (ton champ “Contexte” aide énormément),
+
+tu évites de polluer le modèle avec des candidats Google Places “hors sujet” (sinon il sélectionne n’importe quoi),
+
+tu imposes une structure de sortie claire (JSON) et une logique de conflits + priorités.
