@@ -1,0 +1,61 @@
+name: wh3re
+description: AI-powered group event planning
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Backend & données
+  supabase_flutter: ^2.5.0
+
+  # Cartographie (MVP lieux / suggestions)
+  google_maps_flutter: ^2.7.0
+
+  # IA
+  google_generative_ai: ^0.4.3
+
+  # Géolocalisation
+  geolocator: ^11.0.0
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Gestion d'état
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Deep Links
+  app_links: ^6.1.1
+
+  # UI
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+
+  # Utils
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  share_plus: ^9.0.0
+  flutter_dotenv: ^5.1.0
+  http: ^1.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  riverpod_generator: ^2.4.3
+  custom_lint: ^0.6.4
+  riverpod_lint: ^2.3.10
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/logo.png
+    - assets/icons/
+    - .env
